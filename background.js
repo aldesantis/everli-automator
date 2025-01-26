@@ -150,13 +150,21 @@ function resetState() {
 }
 
 function broadcastStatus() {
-  chrome.runtime.sendMessage({
-    type: 'statusUpdate',
-    status: {
-      isProcessing: shoppingState.isProcessing,
-      currentItemIndex: shoppingState.currentItemIndex,
-      totalItems: shoppingState.items.length,
-      currentItem: shoppingState.items[shoppingState.currentItemIndex]
-    }
-  });
+  try {
+    chrome.runtime.sendMessage({
+      type: 'statusUpdate',
+      status: {
+        isProcessing: shoppingState.isProcessing,
+        currentItemIndex: shoppingState.currentItemIndex,
+        totalItems: shoppingState.items.length,
+        currentItem: shoppingState.items[shoppingState.currentItemIndex]
+      }
+    }).catch(error => {
+      if (!error.message.includes("receiving end does not exist")) {
+        console.error('Error broadcasting status:', error);
+      }
+    });
+  } catch (error) {
+    console.error('Error in broadcastStatus:', error);
+  }
 }

@@ -5,10 +5,26 @@ document.getElementById('start-shopping').addEventListener('click', async () => 
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+  const selectionLogic = document.getElementById('selection-logic').value;
+
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    args: [groceryList],
-    func: async (items) => {
+    args: [groceryList, selectionLogic],
+    func: async (items, logic) => {
+      // Product selection strategies
+      const selectionStrategies = {
+        'most-relevant': () => document.querySelector('.add-to-cart'),
+        // Add more strategies here in the future, for example:
+        // 'cheapest': () => {
+        //   const products = Array.from(document.querySelectorAll('.product'));
+        //   return products.sort((a, b) => {
+        //     const priceA = parseFloat(a.querySelector('.price').textContent);
+        //     const priceB = parseFloat(b.querySelector('.price').textContent);
+        //     return priceA - priceB;
+        //   })[0].querySelector('.add-to-cart');
+        // }
+      };
+      
       for (const item of items) {
         // Find and fill the search input
         const searchInput = document.querySelector('.search-form input');
@@ -29,7 +45,7 @@ document.getElementById('start-shopping').addEventListener('click', async () => 
         // Wait for results and add to cart
         await new Promise(resolve => {
           const checkForAddButton = setInterval(() => {
-            const addToCartButton = document.querySelector('.add-to-cart');
+            const addToCartButton = selectionStrategies[logic]();
             if (addToCartButton) {
               clearInterval(checkForAddButton);
               addToCartButton.click();

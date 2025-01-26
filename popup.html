@@ -14,19 +14,25 @@
     button {
       width: 100%;
       padding: 8px;
-      background-color: #4CAF50;
+      background-color: #3ca000;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #45a049;
+      background-color: #328500;
     }
   </style>
 </head>
 <body>
   <textarea id="grocery-list" placeholder="Enter your grocery items (one per line)"></textarea>
+  <div style="margin-bottom: 10px;">
+    <label for="selection-logic" style="display: block; margin-bottom: 5px;">Selection Logic:</label>
+    <select id="selection-logic" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+      <option value="most-relevant">Most relevant</option>
+    </select>
+  </div>
   <button id="start-shopping">Add Items to Cart</button>
   <script src="popup.js"></script>
 </body>

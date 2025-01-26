@@ -56,15 +56,18 @@ async function startShoppingProcess(items, logic, tabId) {
         target: { tabId: tabId },
         args: [[items[i]], logic],
         func: async (items, logic) => {
-          const selectionStrategies = {
+                        const selectionStrategies = {
             'most-relevant': () => {
               const addToCartButtons = document.querySelectorAll('.add-to-cart');
               // Filter out sponsored products
               for (const button of addToCartButtons) {
                 const vaderProduct = button.closest('.vader-product');
                 if (vaderProduct) {
-                  const sponsoredSpan = vaderProduct.querySelector('span');
-                  if (sponsoredSpan && sponsoredSpan.textContent.includes('Sponsorizzato')) {
+                  // Check all spans in the product
+                  const isSponsored = Array.from(vaderProduct.querySelectorAll('span'))
+                    .some(span => span.textContent.includes('Sponsorizzato'));
+                  
+                  if (isSponsored) {
                     continue;
                   }
                   return button;
@@ -150,6 +153,7 @@ function resetState() {
 }
 
 function broadcastStatus() {
+  // Wrap in try-catch to handle disconnected popup
   try {
     chrome.runtime.sendMessage({
       type: 'statusUpdate',
@@ -160,11 +164,13 @@ function broadcastStatus() {
         currentItem: shoppingState.items[shoppingState.currentItemIndex]
       }
     }).catch(error => {
+      // Silently handle "receiving end does not exist" error
       if (!error.message.includes("receiving end does not exist")) {
         console.error('Error broadcasting status:', error);
       }
     });
   } catch (error) {
+    // Handle any other potential errors
     console.error('Error in broadcastStatus:', error);
   }
 }

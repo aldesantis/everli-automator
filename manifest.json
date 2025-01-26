@@ -3,8 +3,17 @@
   "name": "Grocery Shopping Assistant",
   "version": "1.0",
   "description": "Automates grocery shopping by adding items to cart",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
   "action": {
     "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
   }
 }

@@ -1,90 +1,105 @@
-document.getElementById('start-shopping').addEventListener('click', async () => {
-  const groceryList = document.getElementById('grocery-list').value
+const state = {
+  isProcessing: false,
+  currentItemIndex: 0,
+  items: [],
+  selectionLogic: 'most-relevant'
+};
+
+const elements = {
+  groceryList: document.getElementById('grocery-list'),
+  selectionLogic: document.getElementById('selection-logic'),
+  startButton: document.getElementById('start-shopping'),
+  progressContainer: document.getElementById('progress-container'),
+  progressFill: document.getElementById('progress-fill'),
+  progressText: document.getElementById('progress-text'),
+  currentItem: document.getElementById('current-item')
+};
+
+// Load saved state
+chrome.storage.local.get(['groceryList', 'selectionLogic'], (result) => {
+  if (result.groceryList) {
+    elements.groceryList.value = result.groceryList;
+  }
+  if (result.selectionLogic) {
+    elements.selectionLogic.value = result.selectionLogic;
+  }
+});
+
+// Check current status when popup opens
+chrome.runtime.sendMessage({ type: 'getStatus' }, (response) => {
+  if (response.isProcessing) {
+    updateUIForProcessing(response);
+  }
+});
+
+// Save state when inputs change
+elements.groceryList.addEventListener('input', () => {
+  chrome.storage.local.set({ groceryList: elements.groceryList.value });
+});
+
+elements.selectionLogic.addEventListener('change', () => {
+  chrome.storage.local.set({ selectionLogic: elements.selectionLogic.value });
+});
+
+function updateProgress(current, total, currentItem) {
+  const percentage = (current / total) * 100;
+  elements.progressFill.style.width = `${percentage}%`;
+  elements.progressText.textContent = `Processing items: ${current}/${total}`;
+  elements.currentItem.textContent = `Current item: ${currentItem || 'Complete'}`;
+}
+
+function updateUIForProcessing(status) {
+  elements.startButton.disabled = true;
+  elements.groceryList.disabled = true;
+  elements.selectionLogic.disabled = true;
+  elements.progressContainer.style.display = 'block';
+  
+  if (status.totalItems > 0) {
+    updateProgress(status.currentItemIndex + 1, status.totalItems, status.currentItem);
+  }
+}
+
+function resetUI() {
+  elements.startButton.disabled = false;
+  elements.groceryList.disabled = false;
+  elements.selectionLogic.disabled = false;
+  
+  setTimeout(() => {
+    elements.progressContainer.style.display = 'none';
+    elements.progressFill.style.width = '0%';
+  }, 2000);
+}
+
+elements.startButton.addEventListener('click', async () => {
+  const items = elements.groceryList.value
     .split('\n')
     .filter(item => item.trim() !== '');
-
+    
+  if (items.length === 0) return;
+  
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-  const selectionLogic = document.getElementById('selection-logic').value;
-
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    args: [groceryList, selectionLogic],
-    func: async (items, logic) => {
-      // Product selection strategies
-      const selectionStrategies = {
-        'most-relevant': () => document.querySelector('.add-to-cart'),
-        // Add more strategies here in the future, for example:
-        // 'cheapest': () => {
-        //   const products = Array.from(document.querySelectorAll('.product'));
-        //   return products.sort((a, b) => {
-        //     const priceA = parseFloat(a.querySelector('.price').textContent);
-        //     const priceB = parseFloat(b.querySelector('.price').textContent);
-        //     return priceA - priceB;
-        //   })[0].querySelector('.add-to-cart');
-        // }
-      };
-      
-      for (const item of items) {
-        // Find and fill the search input
-        const searchInput = document.querySelector('.search-form input');
-        searchInput.value = item;
-        
-        // Trigger input event to ensure any listeners are notified
-        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-        
-        // Simulate pressing Enter key
-        searchInput.dispatchEvent(new KeyboardEvent('keydown', {
-          key: 'Enter',
-          code: 'Enter',
-          keyCode: 13,
-          which: 13,
-          bubbles: true
-        }));
-        
-        // Wait for results and add to cart
-        await new Promise(resolve => {
-          const checkForAddButton = setInterval(() => {
-            const addToCartButton = selectionStrategies[logic]();
-            if (addToCartButton) {
-              clearInterval(checkForAddButton);
-              addToCartButton.click();
-              resolve();
-            }
-          }, 100); // Check every 100ms
-          
-          // Timeout after 10 seconds
-          setTimeout(() => {
-            clearInterval(checkForAddButton);
-            resolve();
-          }, 10000);
-        });
-        
-        // Check for replacements popup and click "Salta" if present
-        await new Promise(resolve => {
-          const checkForReplacements = setInterval(() => {
-            const replacementsElement = document.querySelector('.vader-replacements');
-            if (replacementsElement) {
-              const skipButton = Array.from(replacementsElement.querySelectorAll('button'))
-                .find(button => button.textContent.includes('Salta'));
-              if (skipButton) {
-                skipButton.click();
-                clearInterval(checkForReplacements);
-                resolve();
-              }
-            }
-          }, 100); // Check every 100ms
-          
-          // Timeout after 5 seconds if no replacements popup appears
-          setTimeout(() => {
-            clearInterval(checkForReplacements);
-            resolve();
-          }, 5000);
-        });
-
-        // Wait a bit before processing the next item
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
+  
+  chrome.runtime.sendMessage({
+    type: 'startShopping',
+    items: items,
+    selectionLogic: elements.selectionLogic.value,
+    tabId: tab.id
   });
+  
+  updateUIForProcessing({
+    currentItemIndex: 0,
+    totalItems: items.length,
+    currentItem: items[0]
+  });
+});
+
+// Listen for status updates from background script
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'statusUpdate') {
+    if (message.status.isProcessing) {
+      updateUIForProcessing(message.status);
+    } else {
+      resetUI();
+    }
+  }
 });

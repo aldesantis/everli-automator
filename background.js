@@ -37,7 +37,9 @@ async function startShoppingProcess(items, logic, tabId) {
   broadcastStatus();
 
   for (let i = 0; i < items.length; i++) {
+    // Update state and broadcast BEFORE processing the item
     shoppingState.currentItemIndex = i;
+    broadcastStatus();
     
     // Check if tab still exists
     try {
@@ -116,9 +118,6 @@ async function startShoppingProcess(items, logic, tabId) {
       console.error('Error processing item:', error);
       // Continue with next item
     }
-
-    // Broadcast progress after each item
-    broadcastStatus();
   }
 
   // Shopping complete

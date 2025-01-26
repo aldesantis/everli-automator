@@ -42,7 +42,7 @@ elements.selectionLogic.addEventListener('change', () => {
 });
 
 function updateProgress(current, total, currentItem) {
-  const percentage = (current / total) * 100;
+  const percentage = ((current) / total) * 100;
   elements.progressFill.style.width = `${percentage}%`;
   elements.progressText.textContent = `Processing items: ${current}/${total}`;
   elements.currentItem.textContent = `Current item: ${currentItem || 'Complete'}`;

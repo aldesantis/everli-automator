@@ -54,10 +54,24 @@ async function startShoppingProcess(items, logic, tabId) {
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        args: [[items[i]], logic], // Wrap single item in array
+        args: [[items[i]], logic],
         func: async (items, logic) => {
           const selectionStrategies = {
-            'most-relevant': () => document.querySelector('.add-to-cart'),
+            'most-relevant': () => {
+              const addToCartButtons = document.querySelectorAll('.add-to-cart');
+              // Filter out sponsored products
+              for (const button of addToCartButtons) {
+                const vaderProduct = button.closest('.vader-product');
+                if (vaderProduct) {
+                  const sponsoredSpan = vaderProduct.querySelector('span');
+                  if (sponsoredSpan && sponsoredSpan.textContent.includes('Sponsorizzato')) {
+                    continue;
+                  }
+                  return button;
+                }
+              }
+              return null;
+            },
           };
           
           for (const item of items) {
